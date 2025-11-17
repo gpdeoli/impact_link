@@ -114,6 +114,17 @@ export default function ClientsPage() {
       return
     }
 
+    // Verificar se o usuário é AGENCY
+    const userStr = localStorage.getItem('user')
+    if (userStr) {
+      const user = JSON.parse(userStr)
+      if (user.plan !== 'AGENCY') {
+        // Redirecionar se não for AGENCY
+        router.push('/dashboard')
+        return
+      }
+    }
+
     fetchClients()
   }, [router, fetchClients])
 

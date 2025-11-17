@@ -11,9 +11,7 @@ import {
   Monitor, 
   Smartphone, 
   Tablet,
-  MapPin,
   ExternalLink,
-  Calendar,
   Filter
 } from 'lucide-react'
 import { 
@@ -32,7 +30,6 @@ import {
   ResponsiveContainer 
 } from 'recharts'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
@@ -60,12 +57,58 @@ export default function AnalyticsPage() {
   const router = useRouter()
   const [data, setData] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const [clients, setClients] = useState<any[]>([])
+  const [campaigns, setCampaigns] = useState<any[]>([])
+  const [links, setLinks] = useState<any[]>([])
+  const [userPlan, setUserPlan] = useState<string | null>(null)
   const [filters, setFilters] = useState({
     startDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     endDate: new Date().toISOString().split('T')[0],
     clientId: '',
-    campaignId: ''
+    campaignId: '',
+    linkId: ''
   })
+
+  const fetchClients = useCallback(async () => {
+    try {
+      // Apenas buscar clientes se for AGENCY
+      if (userPlan !== 'AGENCY') {
+        setClients([])
+        return
+      }
+      const response = await api.get('/clients?limit=100')
+      setClients(response.data.clients || [])
+    } catch (error) {
+      console.error('Error fetching clients:', error)
+      // Se der erro 403, significa que não é AGENCY
+      if ((error as any).response?.status === 403) {
+        setClients([])
+      }
+    }
+  }, [userPlan])
+
+  const fetchCampaigns = useCallback(async () => {
+    try {
+      const params = new URLSearchParams()
+      if (filters.clientId) params.append('clientId', filters.clientId)
+      const response = await api.get(`/campaigns?limit=100&${params.toString()}`)
+      setCampaigns(response.data.campaigns || [])
+    } catch (error) {
+      console.error('Error fetching campaigns:', error)
+    }
+  }, [filters.clientId])
+
+  const fetchLinks = useCallback(async () => {
+    try {
+      const params = new URLSearchParams()
+      if (filters.clientId) params.append('clientId', filters.clientId)
+      if (filters.campaignId) params.append('campaignId', filters.campaignId)
+      const response = await api.get(`/links?limit=100&${params.toString()}`)
+      setLinks(response.data.links || [])
+    } catch (error) {
+      console.error('Error fetching links:', error)
+    }
+  }, [filters.clientId, filters.campaignId])
 
   const fetchAnalytics = useCallback(async () => {
     try {
@@ -75,18 +118,19 @@ export default function AnalyticsPage() {
       if (filters.endDate) params.append('endDate', filters.endDate)
       if (filters.clientId) params.append('clientId', filters.clientId)
       if (filters.campaignId) params.append('campaignId', filters.campaignId)
+      if (filters.linkId) params.append('linkId', filters.linkId)
 
       const response = await api.get(`/analytics/dashboard?${params.toString()}`)
       setData(response.data)
 
       // Debug: log dos dados recebidos
       console.log('Analytics data received:', response.data)
-      console.log('dailyClicks:', response.data.dailyClicks)
-      console.log('clicksByType:', response.data.clicksByType)
-      console.log('clicksByDevice:', response.data.clicksByDevice)
-      console.log('topReferrers:', response.data.topReferrers)
-      console.log('clicksByCountry:', response.data.clicksByCountry)
-      console.log('topLinks:', response.data.topLinks)
+      console.log('dailyClicks:', response.data.dailyClicks, 'Type:', typeof response.data.dailyClicks, 'Keys:', Object.keys(response.data.dailyClicks || {}))
+      console.log('clicksByType:', response.data.clicksByType, 'Type:', typeof response.data.clicksByType, 'Keys:', Object.keys(response.data.clicksByType || {}))
+      console.log('clicksByDevice:', response.data.clicksByDevice, 'Type:', typeof response.data.clicksByDevice, 'IsArray:', Array.isArray(response.data.clicksByDevice))
+      console.log('topReferrers:', response.data.topReferrers, 'Type:', typeof response.data.topReferrers, 'IsArray:', Array.isArray(response.data.topReferrers))
+      console.log('clicksByCountry:', response.data.clicksByCountry, 'Type:', typeof response.data.clicksByCountry, 'Keys:', Object.keys(response.data.clicksByCountry || {}))
+      console.log('topLinks:', response.data.topLinks, 'Type:', typeof response.data.topLinks, 'IsArray:', Array.isArray(response.data.topLinks))
     } catch (error) {
       console.error('Error fetching analytics:', error)
     } finally {
@@ -101,8 +145,31 @@ export default function AnalyticsPage() {
       return
     }
 
+    // Obter plano do usuário
+    const userStr = localStorage.getItem('user')
+    if (userStr) {
+      const user = JSON.parse(userStr)
+      setUserPlan(user.plan)
+    }
+  }, [router])
+
+  useEffect(() => {
+    if (userPlan) {
+      fetchClients()
+    }
+  }, [userPlan, fetchClients])
+
+  useEffect(() => {
+    fetchCampaigns()
+  }, [fetchCampaigns])
+
+  useEffect(() => {
+    fetchLinks()
+  }, [fetchLinks])
+
+  useEffect(() => {
     fetchAnalytics()
-  }, [router, fetchAnalytics])
+  }, [fetchAnalytics])
 
   const handleFilterChange = (key: string, value: string) => {
     setFilters(prev => ({ ...prev, [key]: value }))
@@ -190,7 +257,7 @@ export default function AnalyticsPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className={userPlan === 'AGENCY' ? 'grid grid-cols-1 md:grid-cols-5 gap-4' : 'grid grid-cols-1 md:grid-cols-4 gap-4'}>
               <div className="space-y-2">
                 <Label htmlFor="startDate">Data Inicial</Label>
                 <Input
@@ -209,33 +276,77 @@ export default function AnalyticsPage() {
                   onChange={(e) => handleFilterChange('endDate', e.target.value)}
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="clientId">Cliente</Label>
-                <Select
-                  value={filters.clientId || "all"}
-                  onValueChange={(value) => handleFilterChange('clientId', value === "all" ? '' : value)}
-                >
-                  <SelectTrigger id="clientId">
-                    <SelectValue placeholder="Todos os clientes" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos os clientes</SelectItem>
-                    {/* Add client options here */}
-                  </SelectContent>
-                </Select>
-              </div>
+              {userPlan === 'AGENCY' && (
+                <div className="space-y-2">
+                  <Label htmlFor="clientId">Cliente</Label>
+                  <Select
+                    value={filters.clientId || "all"}
+                    onValueChange={(value) => {
+                      handleFilterChange('clientId', value === "all" ? '' : value)
+                      // Reset campaign and link when client changes
+                      if (value === "all") {
+                        handleFilterChange('campaignId', '')
+                        handleFilterChange('linkId', '')
+                      }
+                    }}
+                  >
+                    <SelectTrigger id="clientId">
+                      <SelectValue placeholder="Todos os clientes" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos os clientes</SelectItem>
+                      {clients.map((client) => (
+                        <SelectItem key={client.id} value={client.id}>
+                          {client.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
               <div className="space-y-2">
                 <Label htmlFor="campaignId">Campanha</Label>
                 <Select
                   value={filters.campaignId || "all"}
-                  onValueChange={(value) => handleFilterChange('campaignId', value === "all" ? '' : value)}
+                  onValueChange={(value) => {
+                    handleFilterChange('campaignId', value === "all" ? '' : value)
+                    // Reset link when campaign changes
+                    if (value === "all") {
+                      handleFilterChange('linkId', '')
+                    }
+                  }}
+                  disabled={!filters.clientId}
                 >
                   <SelectTrigger id="campaignId">
-                    <SelectValue placeholder="Todas as campanhas" />
+                    <SelectValue placeholder={filters.clientId ? "Todas as campanhas" : "Selecione um cliente"} />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Todas as campanhas</SelectItem>
-                    {/* Add campaign options here */}
+                    {campaigns.map((campaign) => (
+                      <SelectItem key={campaign.id} value={campaign.id}>
+                        {campaign.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="linkId">Link</Label>
+                <Select
+                  value={filters.linkId || "all"}
+                  onValueChange={(value) => handleFilterChange('linkId', value === "all" ? '' : value)}
+                  disabled={!filters.clientId && !filters.campaignId}
+                >
+                  <SelectTrigger id="linkId">
+                    <SelectValue placeholder={filters.clientId || filters.campaignId ? "Todos os links" : "Selecione filtros"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos os links</SelectItem>
+                    {links.map((link) => (
+                      <SelectItem key={link.id} value={link.id}>
+                        {link.title || link.shortCode}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>

@@ -141,15 +141,20 @@ router.post(
         userId: req.userId
       });
 
-      // Validate client and campaign belong to user
-      if (clientId) {
-        const client = await prisma.client.findFirst({
-          where: { id: clientId, userId: req.userId }
-        });
-        if (!client) {
-          return res.status(404).json({ error: 'Client not found' });
-        }
-      }
+            // Validate client and campaign belong to user
+            if (clientId) {
+              // Verificar se o usuário é AGENCY
+              if (req.userPlan !== 'AGENCY') {
+                return res.status(403).json({ error: 'Apenas contas do tipo AGENCY podem associar clientes a links' });
+              }
+              
+              const client = await prisma.client.findFirst({
+                where: { id: clientId, userId: req.userId }
+              });
+              if (!client) {
+                return res.status(404).json({ error: 'Client not found' });
+              }
+            }
 
       if (campaignId) {
         const campaign = await prisma.campaign.findFirst({
@@ -266,16 +271,40 @@ router.put(
         return res.status(404).json({ error: 'Link not found' });
       }
 
+      // Verificar se está tentando associar cliente e se é AGENCY
+      if (req.body.clientId !== undefined) {
+        if (req.body.clientId) {
+          // Verificar se o usuário é AGENCY
+          if (req.userPlan !== 'AGENCY') {
+            return res.status(403).json({ error: 'Apenas contas do tipo AGENCY podem associar clientes a links' });
+          }
+          
+          const client = await prisma.client.findFirst({
+            where: { id: req.body.clientId, userId: req.userId }
+          });
+          if (!client) {
+            return res.status(404).json({ error: 'Client not found' });
+          }
+        }
+      }
+
+      const updateData: any = {
+        title: req.body.title,
+        description: req.body.description,
+        linkType: req.body.linkType,
+        tags: req.body.tags,
+        isActive: req.body.isActive,
+        expiresAt: req.body.expiresAt ? new Date(req.body.expiresAt) : undefined
+      };
+
+      // Apenas atualizar clientId se fornecido e usuário for AGENCY
+      if (req.body.clientId !== undefined) {
+        updateData.clientId = req.body.clientId || null;
+      }
+
       const updated = await prisma.link.update({
         where: { id: req.params.id },
-        data: {
-          title: req.body.title,
-          description: req.body.description,
-          linkType: req.body.linkType,
-          tags: req.body.tags,
-          isActive: req.body.isActive,
-          expiresAt: req.body.expiresAt ? new Date(req.body.expiresAt) : undefined
-        },
+        data: updateData,
         include: {
           client: true,
           campaign: true

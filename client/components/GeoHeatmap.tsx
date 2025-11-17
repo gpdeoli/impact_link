@@ -11,90 +11,45 @@ interface GeoHeatmapProps {
   data: Record<string, number>
 }
 
-// Mapeamento de nomes de países para códigos ISO
-const countryNameToCode: Record<string, string> = {
-  'United States': 'USA',
-  'United Kingdom': 'GBR',
-  'Brazil': 'BRA',
-  'Canada': 'CAN',
-  'Germany': 'DEU',
-  'France': 'FRA',
-  'Spain': 'ESP',
-  'Italy': 'ITA',
-  'Netherlands': 'NLD',
-  'Belgium': 'BEL',
-  'Switzerland': 'CHE',
-  'Austria': 'AUT',
-  'Sweden': 'SWE',
-  'Norway': 'NOR',
-  'Denmark': 'DNK',
-  'Finland': 'FIN',
-  'Poland': 'POL',
-  'Portugal': 'PRT',
-  'Greece': 'GRC',
-  'Ireland': 'IRL',
-  'Czech Republic': 'CZE',
-  'Hungary': 'HUN',
-  'Romania': 'ROU',
-  'Bulgaria': 'BGR',
-  'Croatia': 'HRV',
-  'Slovakia': 'SVK',
-  'Slovenia': 'SVN',
-  'Lithuania': 'LTU',
-  'Latvia': 'LVA',
-  'Estonia': 'EST',
-  'Luxembourg': 'LUX',
-  'Malta': 'MLT',
-  'Cyprus': 'CYP',
-  'Japan': 'JPN',
-  'China': 'CHN',
-  'India': 'IND',
-  'South Korea': 'KOR',
-  'Australia': 'AUS',
-  'New Zealand': 'NZL',
-  'Singapore': 'SGP',
-  'Malaysia': 'MYS',
-  'Thailand': 'THA',
-  'Indonesia': 'IDN',
-  'Philippines': 'PHL',
-  'Vietnam': 'VNM',
-  'Mexico': 'MEX',
-  'Argentina': 'ARG',
-  'Chile': 'CHL',
-  'Colombia': 'COL',
-  'Peru': 'PER',
-  'Venezuela': 'VEN',
-  'Ecuador': 'ECU',
-  'Uruguay': 'URY',
-  'Paraguay': 'PRY',
-  'Bolivia': 'BOL',
-  'South Africa': 'ZAF',
-  'Egypt': 'EGY',
-  'Nigeria': 'NGA',
-  'Kenya': 'KEN',
-  'Morocco': 'MAR',
-  'Algeria': 'DZA',
-  'Tunisia': 'TUN',
-  'Israel': 'ISR',
-  'Saudi Arabia': 'SAU',
-  'United Arab Emirates': 'ARE',
-  'Turkey': 'TUR',
-  'Russia': 'RUS',
-  'Ukraine': 'UKR',
-  'Belarus': 'BLR',
-  'Kazakhstan': 'KAZ',
-  'Uzbekistan': 'UZB',
-  'Pakistan': 'PAK',
-  'Bangladesh': 'BGD',
-  'Sri Lanka': 'LKA',
-  'Nepal': 'NPL',
-  'Myanmar': 'MMR',
-  'Cambodia': 'KHM',
-  'Laos': 'LAO',
-  'Mongolia': 'MNG',
-  'Taiwan': 'TWN',
-  'Hong Kong': 'HKG',
-  'Macau': 'MAC',
+// Mapeamento de códigos ISO 3166-1 alpha-2 (2 letras) para alpha-3 (3 letras)
+// geoip-lite retorna códigos de 2 letras, mas o mapa usa códigos de 3 letras
+const alpha2ToAlpha3: Record<string, string> = {
+  'AD': 'AND', 'AE': 'ARE', 'AF': 'AFG', 'AG': 'ATG', 'AI': 'AIA', 'AL': 'ALB', 'AM': 'ARM',
+  'AO': 'AGO', 'AQ': 'ATA', 'AR': 'ARG', 'AS': 'ASM', 'AT': 'AUT', 'AU': 'AUS', 'AW': 'ABW',
+  'AX': 'ALA', 'AZ': 'AZE', 'BA': 'BIH', 'BB': 'BRB', 'BD': 'BGD', 'BE': 'BEL', 'BF': 'BFA',
+  'BG': 'BGR', 'BH': 'BHR', 'BI': 'BDI', 'BJ': 'BEN', 'BL': 'BLM', 'BM': 'BMU', 'BN': 'BRN',
+  'BO': 'BOL', 'BQ': 'BES', 'BR': 'BRA', 'BS': 'BHS', 'BT': 'BTN', 'BV': 'BVT', 'BW': 'BWA',
+  'BY': 'BLR', 'BZ': 'BLZ', 'CA': 'CAN', 'CC': 'CCK', 'CD': 'COD', 'CF': 'CAF', 'CG': 'COG',
+  'CH': 'CHE', 'CI': 'CIV', 'CK': 'COK', 'CL': 'CHL', 'CM': 'CMR', 'CN': 'CHN', 'CO': 'COL',
+  'CR': 'CRI', 'CU': 'CUB', 'CV': 'CPV', 'CW': 'CUW', 'CX': 'CXR', 'CY': 'CYP', 'CZ': 'CZE',
+  'DE': 'DEU', 'DJ': 'DJI', 'DK': 'DNK', 'DM': 'DMA', 'DO': 'DOM', 'DZ': 'DZA', 'EC': 'ECU',
+  'EE': 'EST', 'EG': 'EGY', 'EH': 'ESH', 'ER': 'ERI', 'ES': 'ESP', 'ET': 'ETH', 'FI': 'FIN',
+  'FJ': 'FJI', 'FK': 'FLK', 'FM': 'FSM', 'FO': 'FRO', 'FR': 'FRA', 'GA': 'GAB', 'GB': 'GBR',
+  'GD': 'GRD', 'GE': 'GEO', 'GF': 'GUF', 'GG': 'GGY', 'GH': 'GHA', 'GI': 'GIB', 'GL': 'GRL',
+  'GM': 'GMB', 'GN': 'GIN', 'GP': 'GLP', 'GQ': 'GNQ', 'GR': 'GRC', 'GS': 'SGS', 'GT': 'GTM',
+  'GU': 'GUM', 'GW': 'GNB', 'GY': 'GUY', 'HK': 'HKG', 'HM': 'HMD', 'HN': 'HND', 'HR': 'HRV',
+  'HT': 'HTI', 'HU': 'HUN', 'ID': 'IDN', 'IE': 'IRL', 'IL': 'ISR', 'IM': 'IMN', 'IN': 'IND',
+  'IO': 'IOT', 'IQ': 'IRQ', 'IR': 'IRN', 'IS': 'ISL', 'IT': 'ITA', 'JE': 'JEY', 'JM': 'JAM',
+  'JO': 'JOR', 'JP': 'JPN', 'KE': 'KEN', 'KG': 'KGZ', 'KH': 'KHM', 'KI': 'KIR', 'KM': 'COM',
+  'KN': 'KNA', 'KP': 'PRK', 'KR': 'KOR', 'KW': 'KWT', 'KY': 'CYM', 'KZ': 'KAZ', 'LA': 'LAO',
+  'LB': 'LBN', 'LC': 'LCA', 'LI': 'LIE', 'LK': 'LKA', 'LR': 'LBR', 'LS': 'LSO', 'LT': 'LTU',
+  'LU': 'LUX', 'LV': 'LVA', 'LY': 'LBY', 'MA': 'MAR', 'MC': 'MCO', 'MD': 'MDA', 'ME': 'MNE',
+  'MF': 'MAF', 'MG': 'MDG', 'MH': 'MHL', 'MK': 'MKD', 'ML': 'MLI', 'MM': 'MMR', 'MN': 'MNG',
+  'MO': 'MAC', 'MP': 'MNP', 'MQ': 'MTQ', 'MR': 'MRT', 'MS': 'MSR', 'MT': 'MLT', 'MU': 'MUS',
+  'MV': 'MDV', 'MW': 'MWI', 'MX': 'MEX', 'MY': 'MYS', 'MZ': 'MOZ', 'NA': 'NAM', 'NC': 'NCL',
+  'NE': 'NER', 'NF': 'NFK', 'NG': 'NGA', 'NI': 'NIC', 'NL': 'NLD', 'NO': 'NOR', 'NP': 'NPL',
+  'NR': 'NRU', 'NU': 'NIU', 'NZ': 'NZL', 'OM': 'OMN', 'PA': 'PAN', 'PE': 'PER', 'PF': 'PYF',
+  'PG': 'PNG', 'PH': 'PHL', 'PK': 'PAK', 'PL': 'POL', 'PM': 'SPM', 'PN': 'PCN', 'PR': 'PRI',
+  'PS': 'PSE', 'PT': 'PRT', 'PW': 'PLW', 'PY': 'PRY', 'QA': 'QAT', 'RE': 'REU', 'RO': 'ROU',
+  'RS': 'SRB', 'RU': 'RUS', 'RW': 'RWA', 'SA': 'SAU', 'SB': 'SLB', 'SC': 'SYC', 'SD': 'SDN',
+  'SE': 'SWE', 'SG': 'SGP', 'SH': 'SHN', 'SI': 'SVN', 'SJ': 'SJM', 'SK': 'SVK', 'SL': 'SLE',
+  'SM': 'SMR', 'SN': 'SEN', 'SO': 'SOM', 'SR': 'SUR', 'SS': 'SSD', 'ST': 'STP', 'SV': 'SLV',
+  'SX': 'SXM', 'SY': 'SYR', 'SZ': 'SWZ', 'TC': 'TCA', 'TD': 'TCD', 'TF': 'ATF', 'TG': 'TGO',
+  'TH': 'THA', 'TJ': 'TJK', 'TK': 'TKL', 'TL': 'TLS', 'TM': 'TKM', 'TN': 'TUN', 'TO': 'TON',
+  'TR': 'TUR', 'TT': 'TTO', 'TV': 'TUV', 'TW': 'TWN', 'TZ': 'TZA', 'UA': 'UKR', 'UG': 'UGA',
+  'UM': 'UMI', 'US': 'USA', 'UY': 'URY', 'UZ': 'UZB', 'VA': 'VAT', 'VC': 'VCT', 'VE': 'VEN',
+  'VG': 'VGB', 'VI': 'VIR', 'VN': 'VNM', 'VU': 'VUT', 'WF': 'WLF', 'WS': 'WSM', 'YE': 'YEM',
+  'YT': 'MYT', 'ZA': 'ZAF', 'ZM': 'ZMB', 'ZW': 'ZWE'
 }
 
 export default function GeoHeatmap({ data }: GeoHeatmapProps) {
@@ -114,16 +69,19 @@ export default function GeoHeatmap({ data }: GeoHeatmapProps) {
   const colorScale = scaleSequential(interpolateYlOrRd)
     .domain([minValue, maxValue])
 
-  // Criar um Map para lookup rápido dos dados (código -> cliques)
+  // Criar um Map para lookup rápido dos dados (código de 3 letras -> cliques)
+  // Converter códigos de 2 letras (do geoip-lite) para 3 letras (do mapa)
   // Usar useMemo para recriar apenas quando data mudar
   const dataMap = useMemo(() => {
     const map = new Map<string, number>()
     if (data) {
       Object.entries(data).forEach(([code, count]) => {
         const normalizedCode = code.toUpperCase().trim()
-        map.set(normalizedCode, count as number)
+        // Converter código de 2 letras para 3 letras se necessário
+        const alpha3Code = alpha2ToAlpha3[normalizedCode] || normalizedCode
+        map.set(alpha3Code, count as number)
         if (process.env.NODE_ENV === 'development') {
-          console.log(`DataMap: ${normalizedCode} = ${count}`)
+          console.log(`DataMap: ${normalizedCode} (2 letras) -> ${alpha3Code} (3 letras) = ${count}`)
         }
       })
     }
@@ -148,35 +106,18 @@ export default function GeoHeatmap({ data }: GeoHeatmapProps) {
                        geo.properties.NAME_LONG || 
                        geo.properties.NAME_EN || 
                        geo.properties.NAME_SORT ||
-                       geo.properties.NAME_ALT ||
                        'Unknown'
     
-    // Tentar diferentes propriedades para código do país
-    // world-atlas pode usar diferentes nomes de propriedades
-    const countryCode = geo.properties.ISO_A2 || 
-                       geo.properties.ISO_A3 ||
-                       geo.properties.ISO_A2_EH ||
-                       geo.properties.ISO_A3_EH ||
-                       geo.properties.ISO_A2 ||
+    // O mapa world-atlas usa ISO_A3 (código de 3 letras) ou ADM0_A3
+    // Priorizar ISO_A3, depois ADM0_A3
+    const countryCode = geo.properties.ISO_A3 || 
                        geo.properties.ADM0_A3 ||
-                       geo.properties.ADM0_A3_US ||
-                       geo.properties.ADM0_A3_UN ||
-                       geo.properties.ADM0_A3_WB ||
-                       geo.properties.ISO_A2 ||
-                       geo.properties.ABBREV ||
+                       geo.properties.ISO_A3_EH ||
                        null
     
-    // Debug: ver todas as propriedades disponíveis (apenas uma vez)
-    if (process.env.NODE_ENV === 'development' && typeof window !== 'undefined' && !(window as any)._geoPropsLogged) {
-      console.log('Propriedades do primeiro país:', Object.keys(geo.properties))
-      console.log('Exemplo de propriedades:', geo.properties)
-      ;(window as any)._geoPropsLogged = true
-    }
-    
-    // Procurar dados por código ISO do país (mais confiável)
+    // Procurar dados por código ISO do país (código de 3 letras)
     let clicks = 0
     
-    // Primeiro, tentar por código ISO_A2 (2 letras) - formato do geoip-lite
     if (countryCode) {
       const normalizedCode = countryCode.toUpperCase().trim()
       clicks = dataMap.get(normalizedCode) || 0
@@ -185,29 +126,6 @@ export default function GeoHeatmap({ data }: GeoHeatmapProps) {
       if (process.env.NODE_ENV === 'development') {
         if (clicks > 0) {
           console.log(`✅ Match encontrado: ${countryName} (${normalizedCode}) = ${clicks} cliques`)
-        }
-      }
-    } else {
-      // Se não encontrou código, log para debug
-      if (process.env.NODE_ENV === 'development' && dataMap.size > 0) {
-        console.log(`⚠️ Sem código para: ${countryName} - Propriedades:`, Object.keys(geo.properties))
-      }
-    }
-    
-    // Se não encontrou por código, tentar por nome (fallback)
-    if (clicks === 0 && countryName) {
-      // Tentar encontrar por nome usando o mapeamento countryNameToCode
-      const mappedCode = countryNameToCode[countryName]
-      if (mappedCode) {
-        clicks = dataMap.get(mappedCode) || 0
-      }
-      
-      // Se ainda não encontrou, tentar match direto por nome
-      if (clicks === 0) {
-        for (const [code, count] of dataMap.entries()) {
-          // Verificar se algum código corresponde ao nome do país
-          const normalizedName = countryName.toLowerCase().trim()
-          // Isso é um fallback menos confiável, mas pode ajudar
         }
       }
     }
@@ -240,13 +158,6 @@ export default function GeoHeatmap({ data }: GeoHeatmapProps) {
         <ZoomableGroup>
           <Geographies geography={geoUrl}>
             {({ geographies }) => {
-              // Log das propriedades do primeiro país para debug
-              if (process.env.NODE_ENV === 'development' && geographies.length > 0 && typeof window !== 'undefined' && !(window as any)._geoPropsLogged) {
-                const firstGeo = geographies[0]
-                console.log('🔍 Propriedades disponíveis no primeiro país:', Object.keys(firstGeo.properties))
-                console.log('🔍 Exemplo completo de propriedades:', firstGeo.properties)
-                ;(window as any)._geoPropsLogged = true
-              }
               
               return geographies.map((geo) => {
                 const { clicks, fillColor, countryName } = getCountryData(geo)
@@ -260,13 +171,8 @@ export default function GeoHeatmap({ data }: GeoHeatmapProps) {
                     strokeWidth={0.5}
                     onMouseEnter={() => {
                       if (process.env.NODE_ENV === 'development') {
-                        const code = geo.properties.ISO_A2 || 
-                                   geo.properties.ISO_A3 ||
-                                   geo.properties.ISO_A2_EH ||
-                                   geo.properties.ADM0_A3 ||
-                                   'undefined'
-                        console.log(`Hover: ${countryName} - Código: ${code} - Clicks: ${clicks}`)
-                        console.log('Todas as propriedades:', Object.keys(geo.properties))
+                        const code = geo.properties.ISO_A3 || geo.properties.ADM0_A3 || 'undefined'
+                        console.log(`Hover: ${countryName} - Código (3 letras): ${code} - Clicks: ${clicks}`)
                       }
                       setTooltipContent({ country: countryName, clicks })
                     }}

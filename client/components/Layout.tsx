@@ -37,7 +37,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { href: '/links', label: 'Links', icon: Link2 },
     { href: '/analytics', label: 'Analytics', icon: BarChart3 },
-    { href: '/clients', label: 'Clientes', icon: Users },
+    // Apenas mostrar Clientes para contas AGENCY
+    ...(user?.plan === 'AGENCY' ? [{ href: '/clients', label: 'Clientes', icon: Users }] : []),
     { href: '/campaigns', label: 'Campanhas', icon: Megaphone },
     { href: '/reports', label: 'Relatórios', icon: FileText },
   ]

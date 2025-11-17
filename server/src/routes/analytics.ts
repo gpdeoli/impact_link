@@ -8,14 +8,21 @@ const prisma = new PrismaClient();
 // Get dashboard overview
 router.get('/dashboard', authenticate, async (req: AuthRequest, res) => {
   try {
-    const { startDate, endDate, clientId, campaignId } = req.query;
+    const { startDate, endDate, clientId, campaignId, linkId } = req.query;
 
     const where: any = {
       userId: req.userId
     };
 
-    if (clientId) where.clientId = clientId as string;
+    // Apenas permitir filtro por cliente se o usuário for AGENCY
+    if (clientId) {
+      if (req.userPlan !== 'AGENCY') {
+        return res.status(403).json({ error: 'Apenas contas do tipo AGENCY podem filtrar por cliente' });
+      }
+      where.clientId = clientId as string;
+    }
     if (campaignId) where.campaignId = campaignId as string;
+    if (linkId) where.id = linkId as string;
 
     // Get date range
     const start = startDate ? new Date(startDate as string) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
@@ -69,15 +76,47 @@ router.get('/dashboard', authenticate, async (req: AuthRequest, res) => {
       .sort((a, b) => b.clicks - a.clicks)
       .slice(0, 10);
 
+    // Build where clause for clicks (filter by link's clientId, campaignId, or linkId)
+    const clickWhere: any = {
+      userId: req.userId,
+      createdAt: {
+        gte: start,
+        lte: end
+      }
+    };
+
+    // If filtering by linkId, filter directly
+    if (linkId) {
+      clickWhere.linkId = linkId as string;
+    } 
+    // If filtering by clientId or campaignId, filter clicks through links
+    else if (clientId || campaignId) {
+      const linkWhere: any = {
+        userId: req.userId
+      };
+      if (clientId) linkWhere.clientId = clientId as string;
+      if (campaignId) linkWhere.campaignId = campaignId as string;
+      
+      const filteredLinks = await prisma.link.findMany({
+        where: linkWhere,
+        select: { id: true }
+      });
+      
+      if (filteredLinks.length > 0) {
+        clickWhere.linkId = {
+          in: filteredLinks.map(link => link.id)
+        };
+      } else {
+        // Se não há links que correspondem aos filtros, retornar dados vazios
+        clickWhere.linkId = {
+          in: []
+        };
+      }
+    }
+
     // Get clicks over time (daily)
     const clicksOverTime = await prisma.click.findMany({
-      where: {
-        userId: req.userId,
-        createdAt: {
-          gte: start,
-          lte: end
-        }
-      },
+      where: clickWhere,
       select: {
         createdAt: true
       },
@@ -96,13 +135,7 @@ router.get('/dashboard', authenticate, async (req: AuthRequest, res) => {
     // Get clicks by device
     const clicksByDevice = await prisma.click.groupBy({
       by: ['device'],
-      where: {
-        userId: req.userId,
-        createdAt: {
-          gte: start,
-          lte: end
-        }
-      },
+      where: clickWhere,
       _count: true
     });
 
@@ -110,11 +143,7 @@ router.get('/dashboard', authenticate, async (req: AuthRequest, res) => {
     const clicksByReferrer = await prisma.click.groupBy({
       by: ['referrer'],
       where: {
-        userId: req.userId,
-        createdAt: {
-          gte: start,
-          lte: end
-        },
+        ...clickWhere,
         referrer: {
           not: null
         }
@@ -132,11 +161,7 @@ router.get('/dashboard', authenticate, async (req: AuthRequest, res) => {
     const clicksByCountry = await prisma.click.groupBy({
       by: ['country'],
       where: {
-        userId: req.userId,
-        createdAt: {
-          gte: start,
-          lte: end
-        },
+        ...clickWhere,
         country: {
           not: null
         }
@@ -146,14 +171,44 @@ router.get('/dashboard', authenticate, async (req: AuthRequest, res) => {
 
     // Calculate insights
     const previousPeriodStart = new Date(start.getTime() - (end.getTime() - start.getTime()));
-    const previousPeriodClicks = await prisma.click.count({
-      where: {
-        userId: req.userId,
-        createdAt: {
-          gte: previousPeriodStart,
-          lt: start
-        }
+    
+    // Build where clause for previous period (same filters as current period)
+    const previousPeriodClickWhere: any = {
+      userId: req.userId,
+      createdAt: {
+        gte: previousPeriodStart,
+        lt: start
       }
+    };
+    
+    // Apply same filters to previous period
+    if (linkId) {
+      previousPeriodClickWhere.linkId = linkId as string;
+    } else if (clientId || campaignId) {
+      const linkWhere: any = {
+        userId: req.userId
+      };
+      if (clientId) linkWhere.clientId = clientId as string;
+      if (campaignId) linkWhere.campaignId = campaignId as string;
+      
+      const filteredLinks = await prisma.link.findMany({
+        where: linkWhere,
+        select: { id: true }
+      });
+      
+      if (filteredLinks.length > 0) {
+        previousPeriodClickWhere.linkId = {
+          in: filteredLinks.map(link => link.id)
+        };
+      } else {
+        previousPeriodClickWhere.linkId = {
+          in: []
+        };
+      }
+    }
+    
+    const previousPeriodClicks = await prisma.click.count({
+      where: previousPeriodClickWhere
     });
 
     const clickGrowth = previousPeriodClicks > 0
@@ -185,14 +240,14 @@ router.get('/dashboard', authenticate, async (req: AuthRequest, res) => {
       });
     }
 
-    res.json({
+    const responseData = {
       overview: {
         totalClicks,
         totalLinks,
         activeLinks,
         clickGrowth: clickGrowth.toFixed(1)
       },
-      clicksByType,
+      clicksByType: clicksByType || {},
       clicksByDevice: clicksByDevice.map(item => ({
         device: item.device || 'Unknown',
         count: item._count
@@ -207,10 +262,20 @@ router.get('/dashboard', authenticate, async (req: AuthRequest, res) => {
         }
         return acc;
       }, {} as Record<string, number>),
-      topLinks,
-      dailyClicks,
-      insights
+      topLinks: topLinks || [],
+      dailyClicks: dailyClicks || {},
+      insights: insights || []
+    };
+
+    // Debug log
+    console.log('Analytics response data:', {
+      dailyClicks: Object.keys(responseData.dailyClicks).length,
+      clicksByDevice: responseData.clicksByDevice.length,
+      topReferrers: responseData.topReferrers.length,
+      clicksByCountry: Object.keys(responseData.clicksByCountry).length
     });
+
+    res.json(responseData);
   } catch (error) {
     console.error('Dashboard error:', error);
     res.status(500).json({ error: 'Failed to fetch dashboard data' });

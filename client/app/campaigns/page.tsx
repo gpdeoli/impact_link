@@ -91,6 +91,7 @@ export default function CampaignsPage() {
   const router = useRouter()
   const [campaigns, setCampaigns] = useState<any[]>([])
   const [clients, setClients] = useState<any[]>([])
+  const [userPlan, setUserPlan] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
   const [editingCampaign, setEditingCampaign] = useState<any>(null)
@@ -148,8 +149,18 @@ export default function CampaignsPage() {
       return
     }
 
+    // Obter plano do usuário
+    const userStr = localStorage.getItem('user')
+    if (userStr) {
+      const user = JSON.parse(userStr)
+      setUserPlan(user.plan)
+      // Apenas buscar clientes se for AGENCY
+      if (user.plan === 'AGENCY') {
+        fetchClients()
+      }
+    }
+
     fetchCampaigns()
-    fetchClients()
   }, [router, fetchCampaigns, fetchClients])
 
   const onSubmit = async (data: CampaignFormValues) => {
@@ -562,37 +573,39 @@ export default function CampaignsPage() {
                     )}
                   />
 
-                  <FormField
-                    control={form.control}
-                    name="clientId"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Cliente</FormLabel>
-                        <Select
-                          onValueChange={field.onChange}
-                          value={field.value || "none"}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Selecione um cliente" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="none">Nenhum cliente</SelectItem>
-                            {clients.map((client) => (
-                              <SelectItem key={client.id} value={client.id}>
-                                {client.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormDescription>
-                          Cliente associado à campanha (opcional)
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  {userPlan === 'AGENCY' && (
+                    <FormField
+                      control={form.control}
+                      name="clientId"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Cliente</FormLabel>
+                          <Select
+                            onValueChange={field.onChange}
+                            value={field.value || "none"}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Selecione um cliente" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="none">Nenhum cliente</SelectItem>
+                              {clients.map((client) => (
+                                <SelectItem key={client.id} value={client.id}>
+                                  {client.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormDescription>
+                            Cliente associado à campanha (opcional)
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
                 </div>
 
                 <FormField

@@ -9,6 +9,11 @@ const prisma = new PrismaClient();
 // Get all clients
 router.get('/', authenticate, async (req: AuthRequest, res: express.Response) => {
   try {
+    // Verificar se o usuário é AGENCY
+    if (req.userPlan !== 'AGENCY') {
+      return res.status(403).json({ error: 'Apenas contas do tipo AGENCY podem acessar clientes' });
+    }
+
     const { page, limit } = req.query;
 
     const where: any = {
@@ -77,6 +82,11 @@ router.get('/', authenticate, async (req: AuthRequest, res: express.Response) =>
 // Get single client
 router.get('/:id', authenticate, async (req: AuthRequest, res: express.Response) => {
   try {
+    // Verificar se o usuário é AGENCY
+    if (req.userPlan !== 'AGENCY') {
+      return res.status(403).json({ error: 'Apenas contas do tipo AGENCY podem acessar clientes' });
+    }
+
     const client = await prisma.client.findFirst({
       where: {
         id: req.params.id,
@@ -138,6 +148,11 @@ router.post(
   ],
   async (req: AuthRequest, res: express.Response) => {
     try {
+      // Verificar se o usuário é AGENCY
+      if (req.userPlan !== 'AGENCY') {
+        return res.status(403).json({ error: 'Apenas contas do tipo AGENCY podem criar clientes' });
+      }
+
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
         return res.status(400).json({ errors: errors.array() });
@@ -186,6 +201,11 @@ router.put(
   ],
   async (req: AuthRequest, res: express.Response) => {
     try {
+      // Verificar se o usuário é AGENCY
+      if (req.userPlan !== 'AGENCY') {
+        return res.status(403).json({ error: 'Apenas contas do tipo AGENCY podem editar clientes' });
+      }
+
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
         return res.status(400).json({ errors: errors.array() });
@@ -222,6 +242,11 @@ router.put(
 // Delete client
 router.delete('/:id', authenticate, async (req: AuthRequest, res: express.Response) => {
   try {
+    // Verificar se o usuário é AGENCY
+    if (req.userPlan !== 'AGENCY') {
+      return res.status(403).json({ error: 'Apenas contas do tipo AGENCY podem excluir clientes' });
+    }
+
     const client = await prisma.client.findFirst({
       where: {
         id: req.params.id,

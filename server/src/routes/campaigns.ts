@@ -141,6 +141,11 @@ router.post(
 
       // Validate client belongs to user
       if (clientId) {
+        // Verificar se o usuário é AGENCY
+        if (req.userPlan !== 'AGENCY') {
+          return res.status(403).json({ error: 'Apenas contas do tipo AGENCY podem associar clientes a campanhas' });
+        }
+        
         const client = await prisma.client.findFirst({
           where: { id: clientId, userId: req.userId }
         });
@@ -199,14 +204,38 @@ router.put(
         return res.status(404).json({ error: 'Campaign not found' });
       }
 
+      // Verificar se está tentando associar cliente e se é AGENCY
+      if (req.body.clientId !== undefined) {
+        if (req.body.clientId) {
+          // Verificar se o usuário é AGENCY
+          if (req.userPlan !== 'AGENCY') {
+            return res.status(403).json({ error: 'Apenas contas do tipo AGENCY podem associar clientes a campanhas' });
+          }
+          
+          const client = await prisma.client.findFirst({
+            where: { id: req.body.clientId, userId: req.userId }
+          });
+          if (!client) {
+            return res.status(404).json({ error: 'Client not found' });
+          }
+        }
+      }
+
+      const updateData: any = {
+        name: req.body.name,
+        description: req.body.description,
+        startDate: req.body.startDate ? new Date(req.body.startDate) : undefined,
+        endDate: req.body.endDate ? new Date(req.body.endDate) : null
+      };
+
+      // Apenas atualizar clientId se fornecido e usuário for AGENCY
+      if (req.body.clientId !== undefined) {
+        updateData.clientId = req.body.clientId || null;
+      }
+
       const updated = await prisma.campaign.update({
         where: { id: req.params.id },
-        data: {
-          name: req.body.name,
-          description: req.body.description,
-          startDate: req.body.startDate ? new Date(req.body.startDate) : undefined,
-          endDate: req.body.endDate ? new Date(req.body.endDate) : null
-        },
+        data: updateData,
         include: {
           client: true
         }
