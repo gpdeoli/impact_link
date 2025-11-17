@@ -186,26 +186,48 @@ Para os links curtos funcionarem, você pode:
 
 ### 4.2. Executar Migrations
 
-No Railway/Render, você pode executar migrations de duas formas:
+⚠️ **IMPORTANTE:** Sempre execute as migrações após o deploy do backend!
 
-**Opção 1: Via Terminal do Serviço**
+**Opção 1: Via SQL Editor do Supabase (Mais Rápido para Correções Urgentes)**
+
+1. Acesse o dashboard do Supabase
+2. Vá em **SQL Editor**
+3. Execute o SQL da migração pendente
+4. Para a coluna `tags` do Client, execute:
+```sql
+ALTER TABLE "Client" ADD COLUMN IF NOT EXISTS "tags" TEXT[] DEFAULT ARRAY[]::TEXT[];
+```
+
+**Opção 2: Via Terminal do Serviço (Railway/Render)**
+```bash
+cd server
+npm run prisma:migrate:deploy
+```
+
+**Opção 3: Via Script de Build Automático**
+O `package.json` já inclui `postinstall` que gera o Prisma Client.
+Para aplicar migrações automaticamente, adicione ao script de build do seu serviço:
+```bash
+npm run prisma:migrate:deploy
+```
+
+**Opção 4: Manualmente via Prisma CLI**
 ```bash
 cd server
 npx prisma migrate deploy
 ```
 
-**Opção 2: Via Script de Build**
-Adicione ao `package.json` do server:
-```json
-{
-  "scripts": {
-    "postinstall": "prisma generate",
-    "migrate": "prisma migrate deploy"
-  }
-}
+### 4.3. Verificar Migrações Aplicadas
+
+No Supabase SQL Editor, verifique se as colunas existem:
+```sql
+-- Verificar coluna tags no Client
+SELECT column_name, data_type 
+FROM information_schema.columns 
+WHERE table_name = 'Client' AND column_name = 'tags';
 ```
 
-### 4.3. Configurar Connection String
+### 4.4. Configurar Connection String
 
 Use a connection string do Supabase no formato:
 ```
