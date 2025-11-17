@@ -143,9 +143,35 @@ export default function GeoHeatmap({ data }: GeoHeatmapProps) {
 
   // Função para obter cliques e cor baseados no país
   const getCountryData = (geo: any): { clicks: number; fillColor: string; countryName: string } => {
-    const countryName = geo.properties.NAME || geo.properties.NAME_LONG || geo.properties.NAME_EN || 'Unknown'
-    // geoip-lite retorna códigos de 2 letras (ISO_A2), então priorizamos ISO_A2
-    const countryCode = geo.properties.ISO_A2 || geo.properties.ISO_A3
+    // Tentar diferentes propriedades para nome do país
+    const countryName = geo.properties.NAME || 
+                       geo.properties.NAME_LONG || 
+                       geo.properties.NAME_EN || 
+                       geo.properties.NAME_SORT ||
+                       geo.properties.NAME_ALT ||
+                       'Unknown'
+    
+    // Tentar diferentes propriedades para código do país
+    // world-atlas pode usar diferentes nomes de propriedades
+    const countryCode = geo.properties.ISO_A2 || 
+                       geo.properties.ISO_A3 ||
+                       geo.properties.ISO_A2_EH ||
+                       geo.properties.ISO_A3_EH ||
+                       geo.properties.ISO_A2 ||
+                       geo.properties.ADM0_A3 ||
+                       geo.properties.ADM0_A3_US ||
+                       geo.properties.ADM0_A3_UN ||
+                       geo.properties.ADM0_A3_WB ||
+                       geo.properties.ISO_A2 ||
+                       geo.properties.ABBREV ||
+                       null
+    
+    // Debug: ver todas as propriedades disponíveis (apenas uma vez)
+    if (process.env.NODE_ENV === 'development' && typeof window !== 'undefined' && !(window as any)._geoPropsLogged) {
+      console.log('Propriedades do primeiro país:', Object.keys(geo.properties))
+      console.log('Exemplo de propriedades:', geo.properties)
+      ;(window as any)._geoPropsLogged = true
+    }
     
     // Procurar dados por código ISO do país (mais confiável)
     let clicks = 0
@@ -159,13 +185,12 @@ export default function GeoHeatmap({ data }: GeoHeatmapProps) {
       if (process.env.NODE_ENV === 'development') {
         if (clicks > 0) {
           console.log(`✅ Match encontrado: ${countryName} (${normalizedCode}) = ${clicks} cliques`)
-        } else {
-          // Log apenas para países conhecidos com dados para debug
-          const hasData = Array.from(dataMap.keys()).some(key => key === normalizedCode)
-          if (!hasData && dataMap.size > 0) {
-            console.log(`❌ Sem match: ${countryName} (${normalizedCode}) - códigos disponíveis:`, Array.from(dataMap.keys()))
-          }
         }
+      }
+    } else {
+      // Se não encontrou código, log para debug
+      if (process.env.NODE_ENV === 'development' && dataMap.size > 0) {
+        console.log(`⚠️ Sem código para: ${countryName} - Propriedades:`, Object.keys(geo.properties))
       }
     }
     
@@ -214,8 +239,16 @@ export default function GeoHeatmap({ data }: GeoHeatmapProps) {
       >
         <ZoomableGroup>
           <Geographies geography={geoUrl}>
-            {({ geographies }) =>
-              geographies.map((geo) => {
+            {({ geographies }) => {
+              // Log das propriedades do primeiro país para debug
+              if (process.env.NODE_ENV === 'development' && geographies.length > 0 && typeof window !== 'undefined' && !(window as any)._geoPropsLogged) {
+                const firstGeo = geographies[0]
+                console.log('🔍 Propriedades disponíveis no primeiro país:', Object.keys(firstGeo.properties))
+                console.log('🔍 Exemplo completo de propriedades:', firstGeo.properties)
+                ;(window as any)._geoPropsLogged = true
+              }
+              
+              return geographies.map((geo) => {
                 const { clicks, fillColor, countryName } = getCountryData(geo)
 
                 return (
@@ -227,7 +260,13 @@ export default function GeoHeatmap({ data }: GeoHeatmapProps) {
                     strokeWidth={0.5}
                     onMouseEnter={() => {
                       if (process.env.NODE_ENV === 'development') {
-                        console.log(`Hover: ${countryName} - Código: ${geo.properties.ISO_A2 || geo.properties.ISO_A3} - Clicks: ${clicks}`)
+                        const code = geo.properties.ISO_A2 || 
+                                   geo.properties.ISO_A3 ||
+                                   geo.properties.ISO_A2_EH ||
+                                   geo.properties.ADM0_A3 ||
+                                   'undefined'
+                        console.log(`Hover: ${countryName} - Código: ${code} - Clicks: ${clicks}`)
+                        console.log('Todas as propriedades:', Object.keys(geo.properties))
                       }
                       setTooltipContent({ country: countryName, clicks })
                     }}
@@ -253,7 +292,7 @@ export default function GeoHeatmap({ data }: GeoHeatmapProps) {
                   />
                 )
               })
-            }
+            }}
           </Geographies>
         </ZoomableGroup>
       </ComposableMap>
