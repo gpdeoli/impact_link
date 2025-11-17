@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -72,37 +72,25 @@ export default function ReportsPage() {
     },
   })
 
-  useEffect(() => {
-    const token = localStorage.getItem('token')
-    if (!token) {
-      router.push('/login')
-      return
-    }
-
-    fetchClients()
-    fetchCampaigns()
-    loadPreview()
-  }, [router])
-
-  const fetchClients = async () => {
+  const fetchClients = useCallback(async () => {
     try {
       const response = await api.get('/clients?limit=100')
       setClients(response.data.clients || [])
     } catch (error) {
       console.error('Error fetching clients:', error)
     }
-  }
+  }, [])
 
-  const fetchCampaigns = async () => {
+  const fetchCampaigns = useCallback(async () => {
     try {
       const response = await api.get('/campaigns?limit=100')
       setCampaigns(response.data.campaigns || [])
     } catch (error) {
       console.error('Error fetching campaigns:', error)
     }
-  }
+  }, [])
 
-  const loadPreview = async () => {
+  const loadPreview = useCallback(async () => {
     const values = form.getValues()
     try {
       const params = new URLSearchParams()
@@ -116,7 +104,19 @@ export default function ReportsPage() {
     } catch (error) {
       console.error('Error loading preview:', error)
     }
-  }
+  }, [form])
+
+  useEffect(() => {
+    const token = localStorage.getItem('token')
+    if (!token) {
+      router.push('/login')
+      return
+    }
+
+    fetchClients()
+    fetchCampaigns()
+    loadPreview()
+  }, [router, fetchClients, fetchCampaigns, loadPreview])
 
   const generatePDF = async () => {
     const values = form.getValues()

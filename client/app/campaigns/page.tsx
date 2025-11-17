@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -117,18 +117,7 @@ export default function CampaignsPage() {
     },
   })
 
-  useEffect(() => {
-    const token = localStorage.getItem('token')
-    if (!token) {
-      router.push('/login')
-      return
-    }
-
-    fetchCampaigns()
-    fetchClients()
-  }, [router])
-
-  const fetchCampaigns = async (page: number = pagination.page) => {
+  const fetchCampaigns = useCallback(async (page: number = pagination.page) => {
     try {
       setLoading(true)
       const response = await api.get(`/campaigns?page=${page}&limit=${pagination.limit}`)
@@ -141,16 +130,27 @@ export default function CampaignsPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [pagination.limit])
 
-  const fetchClients = async () => {
+  const fetchClients = useCallback(async () => {
     try {
       const response = await api.get('/clients?limit=100')
       setClients(response.data.clients || [])
     } catch (error) {
       console.error('Error fetching clients:', error)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    const token = localStorage.getItem('token')
+    if (!token) {
+      router.push('/login')
+      return
+    }
+
+    fetchCampaigns()
+    fetchClients()
+  }, [router, fetchCampaigns, fetchClients])
 
   const onSubmit = async (data: CampaignFormValues) => {
     try {

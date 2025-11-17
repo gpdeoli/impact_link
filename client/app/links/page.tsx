@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -119,17 +119,7 @@ export default function LinksPage() {
     },
   })
 
-  useEffect(() => {
-    const token = localStorage.getItem('token')
-    if (!token) {
-      router.push('/login')
-      return
-    }
-
-    fetchLinks()
-  }, [router])
-
-  const fetchLinks = async (page: number = pagination.page) => {
+  const fetchLinks = useCallback(async (page: number = pagination.page) => {
     try {
       setLoading(true)
       const response = await api.get(`/links?page=${page}&limit=${pagination.limit}`)
@@ -142,7 +132,17 @@ export default function LinksPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [pagination.limit])
+
+  useEffect(() => {
+    const token = localStorage.getItem('token')
+    if (!token) {
+      router.push('/login')
+      return
+    }
+
+    fetchLinks()
+  }, [router, fetchLinks])
 
   const onSubmit = async (data: LinkFormValues) => {
     try {

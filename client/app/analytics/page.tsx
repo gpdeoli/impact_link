@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Layout from '@/components/Layout'
 import api from '@/lib/api'
@@ -57,17 +57,7 @@ export default function AnalyticsPage() {
     campaignId: ''
   })
 
-  useEffect(() => {
-    const token = localStorage.getItem('token')
-    if (!token) {
-      router.push('/login')
-      return
-    }
-
-    fetchAnalytics()
-  }, [router, filters])
-
-  const fetchAnalytics = async () => {
+  const fetchAnalytics = useCallback(async () => {
     try {
       setLoading(true)
       const params = new URLSearchParams()
@@ -78,7 +68,7 @@ export default function AnalyticsPage() {
 
       const response = await api.get(`/analytics/dashboard?${params.toString()}`)
       setData(response.data)
-      
+
       // Debug: log dos dados recebidos
       console.log('Analytics data received:', response.data)
       console.log('dailyClicks:', response.data.dailyClicks)
@@ -92,7 +82,17 @@ export default function AnalyticsPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [filters])
+
+  useEffect(() => {
+    const token = localStorage.getItem('token')
+    if (!token) {
+      router.push('/login')
+      return
+    }
+
+    fetchAnalytics()
+  }, [router, fetchAnalytics])
 
   const handleFilterChange = (key: string, value: string) => {
     setFilters(prev => ({ ...prev, [key]: value }))

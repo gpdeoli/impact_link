@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -92,17 +92,7 @@ export default function ClientsPage() {
     },
   })
 
-  useEffect(() => {
-    const token = localStorage.getItem('token')
-    if (!token) {
-      router.push('/login')
-      return
-    }
-
-    fetchClients()
-  }, [router])
-
-  const fetchClients = async (page: number = pagination.page) => {
+  const fetchClients = useCallback(async (page: number = pagination.page) => {
     try {
       setLoading(true)
       const response = await api.get(`/clients?page=${page}&limit=${pagination.limit}`)
@@ -115,7 +105,17 @@ export default function ClientsPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [pagination.limit])
+
+  useEffect(() => {
+    const token = localStorage.getItem('token')
+    if (!token) {
+      router.push('/login')
+      return
+    }
+
+    fetchClients()
+  }, [router, fetchClients])
 
   const onSubmit = async (data: ClientFormValues) => {
     try {
@@ -570,7 +570,7 @@ export default function ClientsPage() {
                         </div>
                       </FormControl>
                       <FormDescription>
-                        Adicione tags para organizar seus clientes. Exemplo: "Client:GPlays", "VIP", "Premium", etc.
+                        Adicione tags para organizar seus clientes. Exemplo: &quot;Client:GPlays&quot;, &quot;VIP&quot;, &quot;Premium&quot;, etc.
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
