@@ -1,6 +1,6 @@
 import express from 'express';
 import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
+import jwt, { SignOptions } from 'jsonwebtoken';
 import { PrismaClient } from '@prisma/client';
 import { body, validationResult } from 'express-validator';
 import { authenticate, AuthRequest } from '../middleware/auth';
@@ -17,7 +17,7 @@ router.post(
     body('name').trim().notEmpty(),
     body('plan').optional().isIn(['SOLO', 'AGENCY'])
   ],
-  async (req, res) => {
+  async (req: express.Request, res: express.Response) => {
     try {
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
@@ -87,7 +87,7 @@ router.post(
     body('email').isEmail().normalizeEmail(),
     body('password').notEmpty()
   ],
-  async (req, res) => {
+  async (req: express.Request, res: express.Response) => {
     try {
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
@@ -132,7 +132,7 @@ router.post(
 );
 
 // Get current user
-router.get('/me', authenticate, async (req: AuthRequest, res) => {
+router.get('/me', authenticate, async (req: AuthRequest, res: express.Response) => {
   try {
     const user = await prisma.user.findUnique({
       where: { id: req.userId },
@@ -169,10 +169,12 @@ function generateToken(userId: string, plan: string): string {
     throw new Error('JWT_SECRET not configured');
   }
 
+  const expiresIn = process.env.JWT_EXPIRES_IN || '7d';
+
   return jwt.sign(
     { userId, plan },
     secret,
-    { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+    { expiresIn } as SignOptions
   );
 }
 

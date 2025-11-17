@@ -8,11 +8,11 @@ import * as z from 'zod'
 import Layout from '@/components/Layout'
 import api from '@/lib/api'
 import toast from 'react-hot-toast'
-import { Plus, Copy, ExternalLink, Trash2, Edit, ChevronLeft, ChevronRight, X } from 'lucide-react'
+import { Plus, Copy, ExternalLink, Trash2, ChevronLeft, ChevronRight, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ButtonGroup } from '@/components/ui/button-group'
 import { Input } from '@/components/ui/input'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import {
   Select,
   SelectContent,
