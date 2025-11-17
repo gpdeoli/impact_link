@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { ComposableMap, Geographies, Geography, ZoomableGroup } from 'react-simple-maps'
 import { scaleSequential } from 'd3-scale'
 import { interpolateYlOrRd } from 'd3-scale-chromatic'
@@ -99,12 +99,20 @@ const countryNameToCode: Record<string, string> = {
 
 export default function GeoHeatmap({ data }: GeoHeatmapProps) {
   const [tooltipContent, setTooltipContent] = useState<{ country: string; clicks: number } | null>(null)
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   // Debug: log dos dados recebidos (apenas em desenvolvimento)
-  if (process.env.NODE_ENV === 'development') {
-    console.log('GeoHeatmap data:', data)
-    console.log('Países com dados:', Object.keys(data))
-  }
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'development') {
+      console.log('GeoHeatmap data:', data)
+      console.log('Países com dados:', Object.keys(data))
+      console.log('Valores:', Object.values(data))
+    }
+  }, [data])
 
   // Calcular valores máximo e mínimo para escala
   const values = Object.values(data)
@@ -118,22 +126,26 @@ export default function GeoHeatmap({ data }: GeoHeatmapProps) {
   // Função para obter cliques e cor baseados no país
   const getCountryData = (geo: any): { clicks: number; fillColor: string } => {
     const countryName = geo.properties.NAME || geo.properties.NAME_LONG || geo.properties.NAME_EN
+    // geoip-lite retorna códigos de 2 letras (ISO_A2), então priorizamos ISO_A2
     const countryCode = geo.properties.ISO_A2 || geo.properties.ISO_A3
     
     // Procurar dados por código ISO do país (mais confiável)
     let clicks = 0
     
-    // Primeiro, tentar por código ISO (ex: "US", "BR", "GB")
+    // Primeiro, tentar por código ISO_A2 (2 letras) - formato do geoip-lite
     if (countryCode) {
+      const normalizedCode = countryCode.toUpperCase().trim()
       for (const [country, count] of Object.entries(data)) {
-        if (country.toUpperCase() === countryCode.toUpperCase()) {
-          clicks = count
+        const normalizedCountry = country.toUpperCase().trim()
+        // Match exato por código (2 letras)
+        if (normalizedCountry === normalizedCode) {
+          clicks = count as number
           break
         }
       }
     }
     
-    // Se não encontrou por código, tentar por nome
+    // Se não encontrou por código, tentar por nome (fallback)
     if (clicks === 0 && countryName) {
       for (const [country, count] of Object.entries(data)) {
         const normalizedCountry = country.toLowerCase().trim()
@@ -144,7 +156,7 @@ export default function GeoHeatmap({ data }: GeoHeatmapProps) {
           normalizedCountry.includes(normalizedName) ||
           normalizedName.includes(normalizedCountry)
         ) {
-          clicks = count
+          clicks = count as number
           break
         }
       }
@@ -157,14 +169,23 @@ export default function GeoHeatmap({ data }: GeoHeatmapProps) {
     return { clicks, fillColor }
   }
 
+  // Não renderizar até que o componente esteja montado (evita problemas de SSR)
+  if (!mounted) {
+    return (
+      <div className="w-full h-full flex items-center justify-center bg-background">
+        <div className="text-muted-foreground">Carregando mapa...</div>
+      </div>
+    )
+  }
+
   return (
-    <div className="w-full h-full relative">
+    <div className="w-full h-full relative" style={{ minHeight: '500px' }}>
       <ComposableMap
         projectionConfig={{
           scale: 147,
           center: [0, 20]
         }}
-        className="w-full h-full"
+        style={{ width: '100%', height: '100%' }}
       >
         <ZoomableGroup>
           <Geographies geography={geoUrl}>

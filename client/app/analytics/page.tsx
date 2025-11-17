@@ -42,7 +42,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import GeoHeatmap from '@/components/GeoHeatmap'
+import dynamic from 'next/dynamic'
+
+// Importar GeoHeatmap dinamicamente sem SSR para evitar problemas de renderização
+const GeoHeatmap = dynamic(() => import('@/components/GeoHeatmap'), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-full flex items-center justify-center">
+      <div className="text-muted-foreground">Carregando mapa...</div>
+    </div>
+  )
+})
 
 const COLORS = ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#06b6d4']
 
@@ -469,7 +479,7 @@ export default function AnalyticsPage() {
           </CardHeader>
           <CardContent>
             {hasCountryData ? (
-              <div className="w-full h-[500px] rounded-lg overflow-hidden border border-border">
+              <div className="w-full h-[500px] rounded-lg overflow-hidden border border-border bg-background">
                 <GeoHeatmap data={data.clicksByCountry} />
               </div>
             ) : (

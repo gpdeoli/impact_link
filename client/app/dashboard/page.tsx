@@ -7,7 +7,17 @@ import api from '@/lib/api'
 import { Link2, MousePointerClick, TrendingUp, Activity, Globe } from 'lucide-react'
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import GeoHeatmap from '@/components/GeoHeatmap'
+import dynamic from 'next/dynamic'
+
+// Importar GeoHeatmap dinamicamente sem SSR para evitar problemas de renderização
+const GeoHeatmap = dynamic(() => import('@/components/GeoHeatmap'), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-full flex items-center justify-center">
+      <div className="text-muted-foreground">Carregando mapa...</div>
+    </div>
+  )
+})
 
 export default function DashboardPage() {
   const router = useRouter()
@@ -249,7 +259,7 @@ export default function DashboardPage() {
                     <p>Dados: {JSON.stringify(data.clicksByCountry)}</p>
                   </div>
                 )}
-                <div className="w-full h-[500px] rounded-lg overflow-hidden border border-border">
+                <div className="w-full h-[500px] rounded-lg overflow-hidden border border-border bg-background">
                   <GeoHeatmap data={data.clicksByCountry} />
                 </div>
               </>
